@@ -9,38 +9,46 @@ export default class MainScene extends Phaser.Scene {
     preload() {
         // scene 중에 사용되는 assert을 로딩을 정의
 
-        // spritesheet
-        //   - 하나의 이미지에 여러 장면의 모음일때 frameWidth, frameHeight 옵션을 사용하여 분리하여 사용한다.
-        // image
-        //   - 단순히 이미지를 로그한다.
-
-        // 우주인 케릭터
-        this.load.spritesheet("astronaut", "assets/spritesheets/astronaut3.png", {
-            frameWidth: 29,
-            frameHeight: 37,
-            endFrame: 3,
-        });
-
         // 배경 이미지
-        this.load.image("mainroom", "assets/backgrounds/mainroom.png");
+        // this.load.image("mainroom", "assets/backgrounds/mainroom.png");
+        
+        this.load.tilemapTiledJSON("map", "../assets/maps/map2.json");
+        this.load.image("tilset_17x17", "../assets/maps/tileset_17x17.png");
+        this.load.image("logo", "../assets/maps/danawa-logo.png");
         
         // atlas 케릭터
         this.load.atlas("atlas", "../assets/atlas/atlas.png", "../assets/atlas/atlas.json");
-
-        // this.load.on('progress',  function  (value)  {
-        //     console.log(value);
-        // });
-    
-        // this.load.on('complete',  function  ()  {
-        //     console.log('complete');
-        // });
     }
 
     create() {
         // scene 생성, 즉 1회 로직 정의
         const scene = this;
         // 배경 이미지를 등록하여 표시한다.
-        this.add.image(0, 0, "mainroom").setOrigin(0);
+        // this.add.image(0, 0, "mainroom").setOrigin(0);
+        // JSON tiledJSON을 map 추가
+        scene.map = scene.make.tilemap({ key: "map" });
+
+        // 맵의 타일셋 이미지추가 (load key) 메모리에 로딩 정도
+        const tileset = scene.map.addTilesetImage("tileset_17x17", "tilset_17x17");
+        const logo = scene.map.addTilesetImage("logo", "logo");
+        
+
+        // 레이어 추가 (실제 화면 표시)
+        scene.belowLayer = scene.map.createLayer("Below", [tileset], 0, 0);
+        scene.belowLayer.setCollisionByProperty({ collides: true });
+
+        scene.logoLayer = scene.map.createLayer("Logo", [logo], 0, 0);
+        scene.logoLayer.setCollisionByProperty({ collides: true });
+
+        scene.worldLayer = scene.map.createLayer("World", [tileset], 0, 0);
+        scene.worldLayer.setCollisionByProperty({ collides: true });
+
+        // this.camera.setViewport(top, left, width, height);
+        // this.cameras.main.setViewport(30, 30, 800, 600);
+        // this.cameras.main.setPosition(30, 30);
+        
+        
+
         // 서버와 통신용으로 io() 내장 함수를 사용한다.
         this.socket = io();
         // 사용자가 접근시 최초에는 WaitingRoom Scene 화면을 런칭해준다. (룸 이름 입력 화면)
@@ -52,6 +60,7 @@ export default class MainScene extends Phaser.Scene {
 
 
         // 케릭터 객체를 하나 추가한다. 폰드기반 객체 -> astronaut
+        // x:0, y:0, key, 
         this.astronaut = this.physics.add.sprite(1, 1, "atlas", "misa-front");
         this.astronaut.setVisible(false);
 
@@ -104,9 +113,7 @@ export default class MainScene extends Phaser.Scene {
 
         this.socket.on("setState", function(state) {
             const { roomKey, players, numPlayers } = state;
-
             scene.physics.resume();
-
             scene.state.roomKey = roomKey;
             scene.state.players = players;
             scene.state.numPlayers = numPlayers;
@@ -173,45 +180,50 @@ export default class MainScene extends Phaser.Scene {
             const prevVelocity = this.astronaut.body.velocity.clone();
             this.astronaut.body.setVelocity(0);
             
+            // 특정 방향에서 속도가 빨라지는 현상으로 방지하기 위한 코드.
+            this.astronaut.body.velocity.normalize().scale(speed);
 
             // Horizontal movement
             if (this.cursors.left.isDown) { 
                 // 좌표로 보았을때 마이너스로 보내야 좌측이등
                 // 왼쪽 이동
                 this.astronaut.body.setVelocityX(-speed);
-                this.astronaut.flipX = true;
+                this.astronaut.anims.play("misa-left-walk", true);
+                // 좌우 반전 (반전)
+                // this.astronaut.flipX = true;
             } else if (this.cursors.right.isDown) {
+                // 오른쪽 이동
                 this.astronaut.body.setVelocityX(speed);
-                this.astronaut.flipX = false;
-                
-
-            }
-
-            // Verical movement
-            if (this.cursors.up.isDown) {
+                this.astronaut.anims.play("misa-right-walk", true);
+                // 좌우 반전 (원본)
+                // this.astronaut.flipX = false;
+            } else if (this.cursors.up.isDown) {
+                // 위로 이동
                 this.astronaut.body.setVelocityY(-speed);
+                this.astronaut.anims.play("misa-back-walk", true);
             } else if (this.cursors.down.isDown) {
+                // 아래로 이동
                 this.astronaut.body.setVelocityY(speed);
+                this.astronaut.anims.play("misa-front-walk", true);
+            } else {
+                // 애니메이션(움직임) 종료
+                this.astronaut.anims.stop(null, true);
             }
 
-            // 특정 방향에서 속도가 빨라지는 현상으로 방지하기 위한 코드.
-            this.astronaut.body.velocity.normalize().scale(speed);
-
-
-
+            
             // emit player movement
             let x = this.astronaut.x;
             let y = this.astronaut.y;
-            if (this.astronaut.oldPosition &&
-                (x !== this.astronaut.oldPosition.x ||
-                y !== this.astronaut.oldPosition.y)) {
+            let params = { x: this.astronaut.x, y: this.astronaut.y, roomKey: scene.state.roomKey };
+            if (this.astronaut.oldPosition && (x !== this.astronaut.oldPosition.x || y !== this.astronaut.oldPosition.y)) {
                 this.moving = true;
-                this.socket.emit("playerMovement", {
-                    x: this.astronaut.x,
-                    y: this.astronaut.y,
-                    roomKey: scene.state.roomKey,
-                });
+                this.socket.emit("playerMovement", params);
+            } else if (this.joined && this.moving) {
+                this.moving = false;
+                this.socket.emit("playerStopped", params);
             }
+
+
             // save old position data
             this.astronaut.oldPosition = {
                 x: this.astronaut.x,
@@ -222,19 +234,38 @@ export default class MainScene extends Phaser.Scene {
 
     }
 
+    // 내 플레이어 추가
     addPlayer(scene, playerInfo) {
+        // scene 연결 
         scene.joined = true;
+        // 객체 추가 (atlas)
         scene.astronaut = scene.physics.add
-            .sprite(playerInfo.x, playerInfo.y, "astronaut")
+            .sprite(playerInfo.x, playerInfo.y, "atlas", "misa-front")
             .setOrigin(0.5, 0.5)
             .setSize(30, 40)
             .setOffset(0, 24);
+
+        // 레이어와 물리 벽 추가
+        scene.physics.add.collider(scene.astronaut, this.belowLayer);
+        scene.physics.add.collider(scene.astronaut, this.worldLayer);
+        scene.physics.add.collider(scene.astronaut, this.logoLayer);
+
+        // 카메라 동기화
+        scene.camera = scene.cameras.main;
+        // 객체 추적 
+        scene.camera.startFollow(scene.astronaut);
+        // scene.camera.setBounds(
+        //     0,
+        //     0,
+        //     scene.map.widthInPixels,
+        //     scene.map.heightInPixels
+        // );
     }
     addOtherPlayers(scene, playerInfo) {
         const otherPlayer = scene.add.sprite(
             playerInfo.x + 40,
             playerInfo.y + 40,
-            "astronaut"
+            "atlas"
         );
         otherPlayer.playerId = playerInfo.playerId;
         scene.otherPlayers.add(otherPlayer);
