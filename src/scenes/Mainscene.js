@@ -23,6 +23,7 @@ export default class MainScene extends Phaser.Scene {
     create() {
         // scene 생성, 즉 1회 로직 정의
         const scene = this;
+
         // 배경 이미지를 등록하여 표시한다.
         // this.add.image(0, 0, "mainroom").setOrigin(0);
         // JSON tiledJSON을 map 추가
@@ -43,10 +44,8 @@ export default class MainScene extends Phaser.Scene {
         scene.worldLayer = scene.map.createLayer("World", [tileset], 0, 0);
         scene.worldLayer.setCollisionByProperty({ collides: true });
 
-        // this.camera.setViewport(top, left, width, height);
-        // this.cameras.main.setViewport(30, 30, 800, 600);
-        // this.cameras.main.setPosition(30, 30);
-        
+
+
         
 
         // 서버와 통신용으로 io() 내장 함수를 사용한다.
@@ -268,6 +267,12 @@ export default class MainScene extends Phaser.Scene {
             "atlas"
         );
         otherPlayer.playerId = playerInfo.playerId;
+
+        const username = scene.add.text(0, 0, playerInfo.username);
+        text.font = "Arial";
+        text.setOrigin(0.5, 0.5);
+
+        
         scene.otherPlayers.add(otherPlayer);
     }
 }
