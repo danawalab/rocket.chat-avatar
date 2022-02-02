@@ -56,8 +56,14 @@ export default class WaitingRoom extends Phaser.Scene {
         scene.inputElement.addListener("click");
         scene.inputElement.on("click", function (event) {
             if (event.target.name === "enterRoom") {
-                const input = scene.inputElement.getChildByName("code-form");
+                // const input = scene.inputElement.getChildByName("code-form");
                 // scene.socket.emit("isKeyValid", input.value);
+                // parent windows 에서 파라미터 전달. (rocket.chat 최초 파라미터.)
+                const params = new URLSearchParams(location.search);
+                const token = params.get("token");
+                const uid   = params.get("uid");
+                const input = `${token}~${uid}`;
+                console.log(input);
                 // 기본 general 방으로 접속
                 scene.socket.emit("isKeyValid", "general", input);
             }

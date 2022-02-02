@@ -48,6 +48,11 @@ export default class MainScene extends Phaser.Scene {
 
         
 
+
+
+
+
+
         // 서버와 통신용으로 io() 내장 함수를 사용한다.
         this.socket = io();
         // 사용자가 접근시 최초에는 WaitingRoom Scene 화면을 런칭해준다. (룸 이름 입력 화면)
@@ -242,7 +247,13 @@ export default class MainScene extends Phaser.Scene {
             .sprite(playerInfo.x, playerInfo.y, "atlas", "misa-front")
             .setOrigin(0.5, 0.5)
             .setSize(30, 40)
-            .setOffset(0, 24);
+            .setOffset(0, 24)
+            ;
+
+            let text = scene.add.text(0, 0, 'Testing');
+            text.font = "Arial";
+            text.setOrigin(200, 200);
+            scene.astronaut.addChild(text);
 
         // 레이어와 물리 벽 추가
         scene.physics.add.collider(scene.astronaut, this.belowLayer);
@@ -268,9 +279,9 @@ export default class MainScene extends Phaser.Scene {
         );
         otherPlayer.playerId = playerInfo.playerId;
 
-        const username = scene.add.text(0, 0, playerInfo.username);
-        text.font = "Arial";
-        text.setOrigin(0.5, 0.5);
+        // const username = scene.add.text(0, 0, playerInfo.username);
+        // text.font = "Arial";
+        // text.setOrigin(0.5, 0.5);
 
         
         scene.otherPlayers.add(otherPlayer);

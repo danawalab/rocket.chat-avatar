@@ -8,7 +8,6 @@
     "build-client-watch": "set NODE_ENV='development' && webpack -w",
     "heroku-postbuild": "webpack -p",
     "deploy": "script/deploy",
-    "heroku-token": "script/encrypt-heroku-auth-token.js",
     "lint": "eslint ./ --ignore-path .gitignore",
     "lint-fix": "npm run lint -- --fix",
     "prepare": "if [ -d .git ]; then npm-merge-driver install; fi",
