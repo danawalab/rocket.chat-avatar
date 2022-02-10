@@ -63,7 +63,7 @@ export default class WaitingRoom extends Phaser.Scene {
                 const token = params.get("token");
                 const uid   = params.get("uid");
                 const input = `${token}~${uid}`;
-                console.log(input);
+                // console.log(input);
                 // 기본 general 방으로 접속
                 scene.socket.emit("isKeyValid", "general", input);
             }

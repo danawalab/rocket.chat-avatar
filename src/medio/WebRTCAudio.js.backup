@@ -1,0 +1,168 @@
+const signaling = new BroadcastChannel('webrtc');
+
+class WebRTCAudio {
+    constructor() {
+        this.pc = null;
+        this.localStream = null;
+        signaling.onmessage = this._handleMessage;
+    }
+
+    _handleMessage(e) {
+        console.log("handleMessage ", this.pc);
+        if (!this.localStream) {
+            console.log('not ready yet', this.localStream);
+            return;
+        }
+        console.log("WebRTCAudio ", e.data.type, e.data);
+        switch (e.data.type) {
+            case 'offer':
+                this.handleOffer(e.data);
+                break;
+            case 'answer':
+                this.handleAnswer(e.data);
+                break;
+            case 'candidate':
+                this.handleCandidate(e.data);
+                break;
+            case 'ready':
+                if (this.pc) {
+                    console.log('already in call, ignoring');
+                    return;
+                }
+                this.makeCall();
+                break;
+            case 'bye':
+                if (this.pc) {
+                    this.hangup();
+                }
+                break;
+            default:
+                console.log('unhandled', e);
+                break;
+        }
+    }
+    async handleOffer(offer) {
+        console.log("handleOffer ", offer);
+        if (this.pc) {
+            console.error('existing peerconnection');
+            return;
+        }
+        await this.createPeerConnection();
+        await this.pc.setRemoteDescription(offer);
+
+        const answer = await this.pc.createAnswer();
+        signaling.postMessage({type: 'answer', sdp: answer.sdp});
+        await this.pc.setLocalDescription(answer);
+    }
+    async handleAnswer(answer) {
+        console.log("handleAnswer ", answer);
+        if (!this.pc) {
+            console.error('no peer connection');
+            return;
+        }
+        await this.pc.setRemoteDescription(answer);
+    }
+    async handleCandidate(candidate) {
+        console.log("handleCandidate ", candidate);
+        if (!this.pc) {
+            console.error('no peer connection');
+            return;
+        }
+        if (!candidate.candidate) {
+            await this.pc.addIceCandidate(null);
+        } else {
+            await this.pc.addIceCandidate(candidate);
+        }
+    }
+    async makeCall() {
+        console.log("makeCall ");
+        await this.createPeerConnection();
+        const offer = await this.pc.createOffer();
+        signaling.postMessage({type: 'offer', sdp: offer.sdp});
+        await this.pc.setLocalDescription(offer);
+    }
+    createPeerConnection() {
+        console.log("createPeerConnection");
+        this.pc = new RTCPeerConnection();
+        console.log("createPeerConnection", pc);
+        this.pc.onicecandidate = e => {
+            const message = {
+                type: 'candidate',
+                candidate: null,
+            };
+            if (e.candidate) {
+                message.candidate = e.candidate.candidate;
+                message.sdpMid = e.candidate.sdpMid;
+                message.sdpMLineIndex = e.candidate.sdpMLineIndex;
+            }
+            signaling.postMessage(message);
+        };
+
+        this.pc.ontrack = e => {
+            console.log("ontrack", e);
+            e.streams.forEach((stream, index) => {
+                // remote audio
+                const remoteAudio = document.createElement("audio");
+                remoteAudio.setAttribute("autoplay", "true");
+                remoteAudio.setAttribute("controls", "true");
+                remoteAudio.volume = 1;
+                remoteAudio.srcObject = stream;
+
+                // const audioList = document.querySelector("#audio-list");
+                // audioList.append(remoteAudio);
+
+                console.log("stream >> ", index);
+            })
+        };
+        this.localStream.getTracks().forEach(track => this.pc.addTrack(track, this.localStream));
+    }
+    play() {
+        console.log("play", this.localStream);
+        // this.localStream = await navigator.mediaDevices.getUserMedia({audio: true, video: false});
+
+        navigator
+            .mediaDevices
+            .getUserMedia({audio: true, video: false})
+            .then((stream) => {
+                console.log("debug 1", this.localStream, stream)
+                this.localStream = stream
+
+                // local audio
+                const myAudio = document.createElement("audio");
+                // const myAudio = document.querySelector("#myAudio");
+                myAudio.setAttribute("autoplay", "true");
+                myAudio.setAttribute("controls", "true");
+                myAudio.volume = 0.2;
+                myAudio.srcObject = this.localStream;
+                console.log("play check 1 > ", this.localStream);
+
+                signaling.postMessage({type: 'ready'});
+                console.log(this.localStream);
+            }).catch(console.error)
+    }
+    async hangup() {
+        if (this.pc) {
+            this.pc.close();
+            this.pc = null;
+        }
+        this.localStream.getTracks().forEach(track => track.stop());
+        this.localStream = null;
+
+        signaling.postMessage({type: 'bye'});
+    }
+    volumeUp(scene, num) {
+
+        this.alertVolumeInfo(scene, 50, 70, "");
+    }
+    volumeDown(scene, num) {
+        console.log('localStream', this.localStream);
+
+        this.alertVolumeInfo(scene, 50, 70, "");
+    }
+    alertVolumeInfo(scene, x, y, text, {fill, fontSize, fontStyle} = {fill: "#ff0000", fontSize: "24px", fontStyle: "bold"}) {
+        scene.audioAlert = scene.add.text(x, y, text, { fill, fontSize, fontStyle});
+        setTimeout(() => {scene.audioAlert.destroy();}, 500)
+    }
+}
+
+export default new WebRTCAudio();

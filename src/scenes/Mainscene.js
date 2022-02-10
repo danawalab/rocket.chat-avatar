@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import webRTCAudio from "../medio/WebRTCAudio"
 
 export default class MainScene extends Phaser.Scene {
     constructor() {
@@ -10,12 +11,16 @@ export default class MainScene extends Phaser.Scene {
         // scene 중에 사용되는 assert을 로딩을 정의
 
         // 배경 이미지
-        // this.load.image("mainroom", "assets/backgrounds/mainroom.png");
-        
         this.load.tilemapTiledJSON("map", "../assets/maps/map2.json");
         this.load.image("tilset_17x17", "../assets/maps/tileset_17x17.png");
         this.load.image("logo", "../assets/maps/danawa-logo.png");
-        
+
+        // audio image
+        this.load.image("speakerOff", "../assets/audio/speaker_off.png");
+        this.load.image("speakerOn", "../assets/audio/speaker_on.png");
+        this.load.image("volumeUp", "../assets/audio/volume_up.png");
+        this.load.image("volumeDown", "../assets/audio/volume_down.png");
+
         // atlas 케릭터
         this.load.atlas("atlas", "../assets/atlas/atlas.png", "../assets/atlas/atlas.json");
     }
@@ -44,9 +49,40 @@ export default class MainScene extends Phaser.Scene {
         scene.worldLayer = scene.map.createLayer("World", [tileset], 0, 0);
         scene.worldLayer.setCollisionByProperty({ collides: true });
 
+        // webRTC Audio Play
 
 
-        
+        // speaker 위치 표시
+        scene.volumeUp = scene.add
+            .image(30, 20, "volumeUp")
+            .setScrollFactor(0, 0)
+            .setScale(0.4);
+        scene.volumeSpeaker = scene.add
+            .image(30, 60, "speakerOn")
+            .setScrollFactor(0, 0)
+            .setScale(0.4);
+        scene.volumeDown = scene.add
+            .image(30, 100, "volumeDown")
+            .setScrollFactor(0, 0)
+            .setScale(0.4);
+
+        // UI 상호작용 활성화
+        scene.volumeSpeaker.setInteractive();
+        scene.volumeUp.setInteractive();
+        scene.volumeDown.setInteractive();
+
+        // 볼륩업 마우스클릭 이벤트
+        scene.volumeUp.on("pointerdown", () => {
+            console.log("volume up");
+            Audio.volumeUp(scene, 1);
+        });
+        scene.volumeDown.on("pointerdown", () => {
+            console.log("volume Down");
+            Audio.volumeDown(scene, -1);
+        });
+
+
+
 
 
 
@@ -61,7 +97,6 @@ export default class MainScene extends Phaser.Scene {
         this.otherPlayers = this.physics.add.group();
         // 키보드 입력, 이동 등 업데이트시 사용됨.
         this.cursors = this.input.keyboard.createCursorKeys();
-
 
         // 케릭터 객체를 하나 추가한다. 폰드기반 객체 -> astronaut
         // x:0, y:0, key, 
@@ -116,6 +151,7 @@ export default class MainScene extends Phaser.Scene {
         // ***** 서버 통신 ****
 
         this.socket.on("setState", function(state) {
+            console.log("setState", state);
             const { roomKey, players, numPlayers } = state;
             scene.physics.resume();
             scene.state.roomKey = roomKey;
@@ -125,10 +161,10 @@ export default class MainScene extends Phaser.Scene {
 
         // 모든 플레이어
         this.socket.on("currentPlayers", function(arg) {
+            console.log("currentPlayers", arg);
             const { players, numPlayers } = arg;
             scene.state.numPlayers = numPlayers;
             Object.keys(players).forEach(id => {
-                console.log(players[id].playerId, scene.socket.id, players[id].playerId === scene.socket.id);
                 if (players[id].playerId === scene.socket.id) {
                     scene.addPlayer(scene, players[id]);
                 } else {
@@ -138,12 +174,14 @@ export default class MainScene extends Phaser.Scene {
         });
 
         this.socket.on("newPlayer", function(arg) {
+            console.log("newPlayer", arg);
             const { playerInfo, numPlayers } = arg;
             scene.addOtherPlayers(scene, playerInfo);
             scene.state.numPlayers = numPlayers;
         });
 
         this.socket.on("playerMoved", function(playerInfo) {
+            console.log("playerMoved", playerInfo);
             scene.otherPlayers.getChildren().forEach(function(otherPlayer) {
                 if (playerInfo.playerId === otherPlayer.playerId) {
                     const oldX = otherPlayer.x;
@@ -154,6 +192,7 @@ export default class MainScene extends Phaser.Scene {
         });
 
         this.socket.on("otherPlayerStopped", function (playerInfo) {
+            console.log("otherPlayerStopped", playerInfo);
             scene.otherPlayers.getChildren().forEach(function (otherPlayer) {
                 if (playerInfo.playerId === otherPlayer.playerId) {
                 otherPlayer.anims.stop(null, true);
@@ -250,10 +289,10 @@ export default class MainScene extends Phaser.Scene {
             .setOffset(0, 24)
             ;
 
-            let text = scene.add.text(0, 0, 'Testing');
-            text.font = "Arial";
-            text.setOrigin(200, 200);
-            scene.astronaut.addChild(text);
+            // let text = scene.add.text(0, 0, 'Testing');
+            // text.font = "Arial";
+            // text.setOrigin(200, 200);
+            // scene.astronaut.addChild(text);
 
         // 레이어와 물리 벽 추가
         scene.physics.add.collider(scene.astronaut, this.belowLayer);

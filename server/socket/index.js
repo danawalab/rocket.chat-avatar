@@ -1,21 +1,13 @@
-const gameRooms = {
+
+const maximum = process.env.MAXIMUM || 20;
+
+const rooms = {
+    // 공용
     "general": {
       roomKey: "general",
-      users: [],
-      randomTasks: [],
-      scores: [],
-      gameScore: 0,
       players: {},
-      numPlayers: 0
+      numPlayers: 0,
     }
-    // [roomKey]: {
-    // users: [],
-    // randomTasks: [],
-    // scores: [],
-    // gameScore: 0,
-    // players: {},
-    // numPlayers: 0
-    // }
   };
   
   module.exports = (io) => {
@@ -24,9 +16,8 @@ const gameRooms = {
       
       socket.on("joinRoom", (roomKey, username) => {
         socket.join(roomKey);
-        const roomInfo = gameRooms[roomKey];
+        const roomInfo = rooms[roomKey];
 
-        // update PlayerInfo
         roomInfo.players[socket.id] = {
           rotation: 0,
           x: 400,
@@ -34,43 +25,40 @@ const gameRooms = {
           playerId: socket.id,
           username: username
         };
-        // update number of players
+
         roomInfo.numPlayers = Object.keys(roomInfo.players).length;
-        
-        // set initial state
+
         socket.emit("setState", roomInfo);
-  
-        // send the players object to the new player
+
         socket.emit("currentPlayers", {
           players: roomInfo.players,
           numPlayers: roomInfo.numPlayers,
         });
   
-        // update all other players of the new player
+        // 새로운 플레이어
         socket.to(roomKey).emit("newPlayer", {
           playerInfo: roomInfo.players[socket.id],
           numPlayers: roomInfo.numPlayers,
         });
       });
-  
-      // when a player moves, update the player data
+
+      // 아바타 이동
       socket.on("playerMovement", function (data) {
         const { x, y, roomKey } = data;
-        gameRooms[roomKey].players[socket.id].x = x;
-        gameRooms[roomKey].players[socket.id].y = y;
-        // emit a message to all players about the player that moved
-        socket
-          .to(roomKey)
-          .emit("playerMoved", gameRooms[roomKey].players[socket.id]);
+        if (x && y && rooms[roomKey]?.players[socket.id]) {
+          rooms[roomKey].players[socket.id].x = x;
+          rooms[roomKey].players[socket.id].y = y;
+          socket.to(roomKey).emit("playerMoved", rooms[roomKey].players[socket.id]);
+        }
       });
   
-      // when a player disconnects, remove them from our players object
+      // 연결끊기
       socket.on("disconnect", function () {
         //find which room they belong to
         let roomKey = 0;
-        for (let keys1 in gameRooms) {
-          for (let keys2 in gameRooms[keys1]) {
-            Object.keys(gameRooms[keys1][keys2]).map((el) => {
+        for (let keys1 in rooms) {
+          for (let keys2 in rooms[keys1]) {
+            Object.keys(rooms[keys1][keys2]).map((el) => {
               if (el === socket.id) {
                 roomKey = keys1;
               }
@@ -78,7 +66,7 @@ const gameRooms = {
           }
         }
   
-        const roomInfo = gameRooms[roomKey];
+        const roomInfo = rooms[roomKey];
   
         if (roomInfo) {
           console.log("user disconnected: ", socket.id);
@@ -95,23 +83,46 @@ const gameRooms = {
       });
   
       socket.on("isKeyValid", function (rookKey, input) {
-        Object.keys(gameRooms).includes(rookKey)
+        Object.keys(rooms).includes(rookKey)
           ? socket.emit("keyIsValid", rookKey, input)
           : socket.emit("keyNotValid");
       });
       // get a random code for the room
       socket.on("getRoomCode", async function () {
-        // let key = codeGenerator();
-        // while (Object.keys(gameRooms).includes(key)) {
-        //   key = codeGenerator();
-        // }
-        // gameRooms[key] = {
-        //   roomKey: key,
-        //   players: {},
-        //   numPlayers: 0,
-        // };
+        //TODO 대화방마다 고유한값으로 식별한다. 처음엔 general 코드로 개발 진행 중..
         socket.emit("roomCreated", "general");
       });
+
+
+
+
+
+      // 이하 audio
+      socket.on("offer", offer => {
+        socket.to(offer.id).emit("getOffer", {
+          sdp: offer.sdp,
+          offerSendID: offer.offerSendID
+        });
+      });
+
+      socket.on("answer", answer => {
+        socket.to(answer.id).emit("getAnswer", {
+          sdp: answer.sdp,
+          answerSendID: answer.answerSendID,
+        });
+      });
+
+      socket.on("candidate", candidate => {
+        socket.to(candidate.id).emit("getCandidate", {
+          candidate: candidate.candidate,
+          candidateSendID: candidate.candidateSendID,
+        });
+      });
+
+
+
+
+
     });
   };
   
