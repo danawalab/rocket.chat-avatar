@@ -3,24 +3,10 @@
     <head>
         <meta charset="utf-8">
         <link rel="shortcut icon" type="image/png" src="favicon.ico">
-        <style>
-            body {
-                background-color: "#101212",
-                margin: "0px !important",
-            },
-            #game>* {
-                margin: "0px !important",
-            }
-        </style>
     </head>
     <body>
         <div id="game"></div>
-
-        <audio id="myAudio"></audio>
-        <div id="audio-list">
-
-        </div>
-
+        <div id="video-container" style="display: none"></div>
 
         <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
         <script src="/socket.io/socket.io.js" charset="utf-8" ></script>

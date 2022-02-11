@@ -1,6 +1,6 @@
 const signaling = new BroadcastChannel('webrtc');
 
-class WebRTCAudio {
+class OpenviduHandler {
     constructor() {
         this.pc = null;
         this.localStream = null;
@@ -13,7 +13,7 @@ class WebRTCAudio {
             console.log('not ready yet', this.localStream);
             return;
         }
-        console.log("WebRTCAudio ", e.data.type, e.data);
+        console.log("OpenviduHandler ", e.data.type, e.data);
         switch (e.data.type) {
             case 'offer':
                 this.handleOffer(e.data);
@@ -165,4 +165,4 @@ class WebRTCAudio {
     }
 }
 
-export default new WebRTCAudio();
+export default new OpenviduHandler();

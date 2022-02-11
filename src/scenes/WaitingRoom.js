@@ -18,6 +18,10 @@ export default class WaitingRoom extends Phaser.Scene {
     create() {
         const scene = this;
 
+        const params = new URLSearchParams(location.search);
+        const userName = params.get("userName") || ("anonymous" + Math.ceil(Math.random() * 9999));
+        const roomKey = params.get("roomKey") || "general";
+
         scene.popUp = scene.add.graphics();
         scene.boxes = scene.add.graphics();
 
@@ -59,32 +63,19 @@ export default class WaitingRoom extends Phaser.Scene {
                 // const input = scene.inputElement.getChildByName("code-form");
                 // scene.socket.emit("isKeyValid", input.value);
                 // parent windows 에서 파라미터 전달. (rocket.chat 최초 파라미터.)
-                const params = new URLSearchParams(location.search);
-                const token = params.get("token");
-                const uid   = params.get("uid");
-                const input = `${token}~${uid}`;
+
                 // console.log(input);
                 // 기본 general 방으로 접속
-                scene.socket.emit("isKeyValid", "general", input);
+                scene.socket.emit("isKeyValid", roomKey, userName);
             }
         });
 
-
-        scene.socket.emit("getRoomCode");
-        // scene.requestButton.setInteractive();
-        // scene.requestButton.on("pointerdown", () => {
-        //     scene.socket.emit("getRoomCode");
-        // });
+        scene.socket.emit("getRoomCode", roomKey);
 
         scene.notValidText = scene.add.text(670, 295, "", {
             fill: "#ff0000",
             fontSize: "15px",
         });
-        // scene.roomKeyText = scene.add.text(210, 250, "", {
-        //     fill: "#00ff00",
-        //     fontSize: "20px",
-        //     fontStyle: "bold",
-        // });
 
         scene.socket.on("roomCreated", function (roomKey) {
             scene.roomKey = roomKey;
@@ -98,8 +89,6 @@ export default class WaitingRoom extends Phaser.Scene {
             scene.socket.emit("joinRoom", roomKey, input);
             scene.scene.stop("WaitingRoom");
         });
-
-
 
     }
 

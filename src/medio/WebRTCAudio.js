@@ -28,49 +28,7 @@ class WebRTCAudio {
                 console.log("An error occurred when accessing media devices", err);
             });
     }
-    newListener(listener) {
-        this.rtcPeerConnections[listener.id] = new RTCPeerConnection(iceServers);
 
-        const audio = document.querySelector("#myAudio");
-        audio.setAttribute("autoplay", "true");
-        audio.setAttribute("controls", "true");
-        audio.volume = 0.5;
-
-        const stream = audio.srcObject;
-        stream
-            .getTracks()
-            .forEach((track) => this.rtcPeerConnections[listener.id].addTrack(track, stream));
-
-        this.rtcPeerConnections[listener.id].onicecandidate = (event) => {
-            if (event.candidate) {
-                console.log("sending ice candidate");
-                socket.emit("candidate", listener.id, {
-                    type: "candidate",
-                    label: event.candidate.sdpMLineIndex,
-                    id: event.candidate.sdpMid,
-                    candidate: event.candidate.candidate,
-                });
-            }
-        };
-
-        this.rtcPeerConnections[listener.id]
-            .createOffer()
-            .then((sessionDescription) => {
-                this.rtcPeerConnections[listener.id].setLocalDescription(sessionDescription);
-                socket.emit("offer", listener.id, {
-                    type: "offer",
-                    sdp: sessionDescription,
-                    broadcaster: user,
-                });
-            })
-            .catch((error) => {
-                console.log(error);
-            });
-
-        let li = document.createElement("li");
-        li.innerText = viewer.name + " has joined";
-        viewers.appendChild(li);
-    }
 
     volumeUp(scene, num) {
         this.alertVolumeInfo(scene, 50, 70, "");

@@ -82,19 +82,15 @@ const rooms = {
         }
       });
   
-      socket.on("isKeyValid", function (rookKey, input) {
-        Object.keys(rooms).includes(rookKey)
-          ? socket.emit("keyIsValid", rookKey, input)
+      socket.on("isKeyValid", function (roomKey, input) {
+        Object.keys(rooms).includes(roomKey)
+          ? socket.emit("keyIsValid", roomKey, input)
           : socket.emit("keyNotValid");
       });
       // get a random code for the room
-      socket.on("getRoomCode", async function () {
-        //TODO 대화방마다 고유한값으로 식별한다. 처음엔 general 코드로 개발 진행 중..
-        socket.emit("roomCreated", "general");
+      socket.on("getRoomCode", async function (roomKey) {
+        socket.emit("roomCreated", roomKey || "general");
       });
-
-
-
 
 
       // 이하 audio

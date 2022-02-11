@@ -1,5 +1,7 @@
 import Phaser from "phaser";
-import webRTCAudio from "../medio/WebRTCAudio"
+import OpenviduHandler from "../medio/OpenviduHandler"
+
+const openvidu = new OpenviduHandler();
 
 export default class MainScene extends Phaser.Scene {
     constructor() {
@@ -74,11 +76,11 @@ export default class MainScene extends Phaser.Scene {
         // 볼륩업 마우스클릭 이벤트
         scene.volumeUp.on("pointerdown", () => {
             console.log("volume up");
-            Audio.volumeUp(scene, 1);
+
         });
         scene.volumeDown.on("pointerdown", () => {
             console.log("volume Down");
-            Audio.volumeDown(scene, -1);
+
         });
 
 
@@ -157,6 +159,36 @@ export default class MainScene extends Phaser.Scene {
             scene.state.roomKey = roomKey;
             scene.state.players = players;
             scene.state.numPlayers = numPlayers;
+
+            const player = Object.values(players).find(player => player.playerId === scene.socket.id)
+            
+            if (player) {
+                openvidu.joinSession(roomKey, player.username)
+                    .then(() => {
+                        scene.audioConnectText = scene.add.text(
+                            200,
+                            50,
+                            "오디오가 연결되었습니다.",
+                            {
+                                fill: "",
+                                fontSize: "24pt",
+                                fontStyle: "bold"
+                            });
+                    })
+                    .catch(error => {
+                        console.warn(error)
+                        scene.audioConnectText = scene.add.text(
+                            200,
+                            50,
+                            "오디오 연결하지 못했습니다.",
+                            {
+                                fill: "",
+                                fontSize: "24pt",
+                                fontStyle: "bold"
+                            });
+                    })
+            }
+
         });
 
         // 모든 플레이어
