@@ -45,7 +45,7 @@ const rooms = {
       // 아바타 이동
       socket.on("playerMovement", function (data) {
         const { x, y, roomKey } = data;
-        if (x && y && rooms[roomKey]?.players[socket.id]) {
+        if (x && y) {
           rooms[roomKey].players[socket.id].x = x;
           rooms[roomKey].players[socket.id].y = y;
           socket.to(roomKey).emit("playerMoved", rooms[roomKey].players[socket.id]);
