@@ -1,1 +1,6 @@
 node_modules
+
+server/certificate.key
+server/certificate.pem
+**/certificate.*
+Dockerfile
