@@ -1,11 +1,10 @@
 const path = require("path");
 const https = require('https');
+const redirectToHTTPS = require('express-http-to-https').redirectToHTTPS
 const express = require("express");
 const session = require('express-session');
 const morgan = require("morgan");
 const compression = require("compression");
-const PORT = process.env.PORT || 3000;
-const app = express();
 const socketio = require("socket.io");
 const OpenVidu = require('openvidu-node-client').OpenVidu;
 const OpenViduRole = require('openvidu-node-client').OpenViduRole;
@@ -13,6 +12,8 @@ const fs = require('fs');
 const bodyParser = require('body-parser');
 const config = require("./config/config")
 
+const PORT = process.env.PORT || 3000;
+const app = express();
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
 
@@ -23,6 +24,7 @@ let mapSessionNamesTokens = {};
 
 const createApp = () => {
     app.use(morgan("dev"));
+    app.use(redirectToHTTPS([/localhost:(\d{4})/], [/\/insecure/], 301));
 
     app.use(express.json());
     app.use(bodyParser.json({
