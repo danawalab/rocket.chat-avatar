@@ -112,8 +112,18 @@ export default class OpenviduHandler {
 
 
         // --- 8) Publish your stream ---
-
-        session.publish(publisher);
+        navigator.getUserMedia({ audio: true, video: false}, function (stream) {
+            if (stream.getAudioTracks().length > 0) {
+                console.log("publisher")
+                session.publish(publisher);
+            } else {
+                console.log("viewer")
+            }
+        }, function (error) {
+            // code for when there is an error
+            console.warn(error);
+            console.warn("viewer mode");
+        });
 
         this.OV = OV;
         this.session = session;

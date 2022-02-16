@@ -15,12 +15,50 @@ const config = require("./config/config")
 const PORT = process.env.PORT || 3000;
 const app = express();
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
+// process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
 
 // Collection to pair session names with OpenVidu Session objects
 let mapSessions = {};
 // Collection to pair session names with tokens
 let mapSessionNamesTokens = {};
+
+// ***** openvidu URI ****** //
+
+const OV = new OpenVidu(config.OPENVIDU_URL, config.OPENVIDU_SECRET);
+
+const createSession = (res, sessionName, connectionProperties) => {
+    // New session
+    console.log('New session ' + sessionName);
+
+    // Create a new OpenVidu Session asynchronously
+    OV.createSession()
+        .then(session => {
+            // Store the new Session in the collection of Sessions
+            mapSessions[sessionName] = session;
+            // Store a new empty array in the collection of tokens
+            mapSessionNamesTokens[sessionName] = [];
+
+            // Generate a new connection asynchronously with the recently created connectionProperties
+            session.createConnection(connectionProperties)
+                .then(connection => {
+
+                    // Store the new token in the collection of tokens
+                    mapSessionNamesTokens[sessionName].push(connection.token);
+
+                    // Return the Token to the client
+                    res.status(200).send({
+                        0: connection.token
+                    });
+                })
+                .catch(error => {
+                    console.error(error);
+                });
+        })
+        .catch(error => {
+            console.error(error);
+        });
+
+}
 
 const createApp = () => {
     app.use(morgan("dev"));
@@ -30,13 +68,19 @@ const createApp = () => {
     app.use(bodyParser.json({
         type: 'application/vnd.api+json'
     }));
-    app.use(express.urlencoded({ extended: true }));
+    app.use(express.urlencoded({extended: true}));
     app.use(compression());
 
     app.use(session({
         saveUninitialized: true,
         resave: false,
-        secret: config.OPENVIDU_SECRET
+        secret: config.OPENVIDU_SECRET,
+        cookie: {
+            secure: true,
+            httpOnly: true,
+            sameSite: 'none',
+            maxAge: 60 * 60 * 24 * 1000
+        },
     }));
 
     app.use(express.static(path.join(__dirname, "..", "public")));
@@ -52,9 +96,7 @@ const createApp = () => {
     });
 
 
-    // ***** openvidu URI ****** //
 
-    const OV = new OpenVidu(config.OPENVIDU_URL, config.OPENVIDU_SECRET);
 
     /* REST API */
 
@@ -100,7 +142,7 @@ const createApp = () => {
 
             // Optional data to be passed to other users when this user connects to the video-call
             // In this case, a JSON with the value we stored in the req.session object on login
-            const serverData = JSON.stringify({ serverData: req.session.loggedUser });
+            const serverData = JSON.stringify({serverData: req.session.loggedUser});
 
             console.log("Getting a token | {roomKey}={" + sessionName + "}");
 
@@ -130,38 +172,10 @@ const createApp = () => {
                     })
                     .catch(error => {
                         console.error(error);
+                        createSession(res, sessionName, connectionProperties);
                     });
             } else {
-                // New session
-                console.log('New session ' + sessionName);
-
-                // Create a new OpenVidu Session asynchronously
-                OV.createSession()
-                    .then(session => {
-                        // Store the new Session in the collection of Sessions
-                        mapSessions[sessionName] = session;
-                        // Store a new empty array in the collection of tokens
-                        mapSessionNamesTokens[sessionName] = [];
-
-                        // Generate a new connection asynchronously with the recently created connectionProperties
-                        session.createConnection(connectionProperties)
-                            .then(connection => {
-
-                                // Store the new token in the collection of tokens
-                                mapSessionNamesTokens[sessionName].push(connection.token);
-
-                                // Return the Token to the client
-                                res.status(200).send({
-                                    0: connection.token
-                                });
-                            })
-                            .catch(error => {
-                                console.error(error);
-                            });
-                    })
-                    .catch(error => {
-                        console.error(error);
-                    });
+                createSession(res, sessionName, connectionProperties);
             }
         }
     });
@@ -210,12 +224,6 @@ const createApp = () => {
         return (session.loggedUser != null);
     }
 
-    function getBasicAuth() {
-        return 'Basic ' + (new Buffer('OPENVIDUAPP:' + config.OPENVIDU_SECRET).toString('base64'));
-    }
-
-
-
     app.use("*", (req, res) => {
         res.sendFile(path.join(__dirname, "..", "public/index.html"));
     });
@@ -237,9 +245,7 @@ const startListening = () => {
     const server = https.createServer(options, app).listen(PORT, () => {
         console.log(`Server Listen. PORT: ${PORT}`);
     });
-    // const server = app.listen(PORT, () => {
-    //     console.log(`Server Listen. PORT: ${PORT}`);
-    // })
+
     const io = socketio(server);
     require("./socket")(io);
 }
