@@ -21,6 +21,8 @@ export default class WaitingRoom extends Phaser.Scene {
         const params = new URLSearchParams(location.search);
         const userName = params.get("userName") || ("anonymous" + Math.ceil(Math.random() * 9999));
         const roomKey = params.get("roomKey") || "general";
+        const roomName = params.get("roomName") || "개인방";
+        const rColor = "0x" + Math.floor(Math.random()*16777215).toString(16)
 
         scene.popUp = scene.add.graphics();
         scene.boxes = scene.add.graphics();
@@ -38,36 +40,19 @@ export default class WaitingRoom extends Phaser.Scene {
         scene.popUp.fillRect(25, 25, 750, 500);
 
         // title
-        scene.title = scene.add.text(100, 75, "Rocket.Chat", {
+        scene.title = scene.add.text(300, 200, roomName, {
             fill: "#a173eb",
-            fontSize: "66px",
+            fontSize: "24px",
             fontStyle: "bold"
         });
 
-        // left popup
-        // scene.boxes.strokeRect(100, 200, 275, 100);
-        // scene.boxes.fillRect(100, 200, 275, 100);
-        // scene.requestButton = scene.add.text(140, 215, "Request Room key", {
-        //     fill: "#000000",
-        //     fontSize: "20px",
-        //     fontStyle: "bold",
-        // });
-
         // right popup
-        scene.boxes.strokeRect(175, 200, 275, 100);
-        scene.boxes.fillRect(175, 200, 275, 100);
-        scene.inputElement = scene.add.dom(300, 250).createFromCache("codeform");
+        scene.boxes.strokeRect(290, 240, 270, 100);
+        scene.boxes.fillRect(290, 240, 270, 100);
+        scene.inputElement = scene.add.dom(425, 270).createFromCache("codeform");
         scene.inputElement.addListener("click");
         scene.inputElement.on("click", function (event) {
-            if (event.target.name === "enterRoom") {
-                // const input = scene.inputElement.getChildByName("code-form");
-                // scene.socket.emit("isKeyValid", input.value);
-                // parent windows 에서 파라미터 전달. (rocket.chat 최초 파라미터.)
-
-                // console.log(input);
-                // 기본 general 방으로 접속
-                scene.socket.emit("isKeyValid", roomKey, userName);
-            }
+            scene.socket.emit("isKeyValid", roomKey, {userName, roomKey, roomName, rColor});
         });
 
         scene.socket.emit("getRoomCode", roomKey);

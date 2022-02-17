@@ -12,132 +12,134 @@ export default class OpenviduHandler {
     }
 
     async joinSession(roomKey, userName) {
+        return new Promise(async (resolve, reject) => {
+            // session login
 
-        // session login
+            const loginResponse = await fetch("api-login/login", {
+                method: "POST",
+                body: JSON.stringify({user: userName}),
+                mode: "cors",
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            })
 
-        const loginResponse = await fetch("api-login/login", {
-            method: "POST",
-            body: JSON.stringify({user: userName}),
-            mode: "cors",
-            headers: {
-                "Content-Type": "application/json"
-            }
-        })
+            console.log("step 1. logged ", loginResponse.status);
 
-        console.log("step 1. logged ", loginResponse.status);
+            // get token
 
-        // get token
+            const getTokenResponse = await fetch("api-sessions/get-token", {
+                method: "POST",
+                body: JSON.stringify({sessionName: roomKey}),
+                mode: "cors",
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            })
 
-        const getTokenResponse = await fetch("api-sessions/get-token", {
-            method: "POST",
-            body: JSON.stringify({sessionName: roomKey}),
-            mode: "cors",
-            headers: {
-                "Content-Type": "application/json"
-            }
-        })
-
-        const getTokenBody = await getTokenResponse.json()
-        const token = getTokenBody[0]
-        console.log("step 2. getToken ", getTokenBody);
+            const getTokenBody = await getTokenResponse.json()
+            const token = getTokenBody[0]
+            console.log("step 2. getToken ", getTokenBody);
 
 
-        // --- 1) Get an OpenVidu object ---
+            // --- 1) Get an OpenVidu object ---
 
-        const OV = new OpenVidu();
+            const OV = new OpenVidu();
 
-        // --- 2) Init a session ---
+            // --- 2) Init a session ---
 
-        const session = OV.initSession();
+            const session = OV.initSession();
 
-        // --- 3) Specify the actions when events take place in the session ---
+            // --- 3) Specify the actions when events take place in the session ---
 
-        // On every new Stream received...
-        session.on('streamCreated', (event) => {
+            // On every new Stream received...
+            session.on('streamCreated', (event) => {
 
-            // Subscribe to the Stream to receive it
-            // HTML video will be appended to element with 'video-container' id
-            const subscriber = session.subscribe(event.stream, 'video-container');
+                // Subscribe to the Stream to receive it
+                // HTML video will be appended to element with 'video-container' id
+                const subscriber = session.subscribe(event.stream, 'video-container');
 
-            // When the HTML video has been appended to DOM...
-            subscriber.on('videoElementCreated', (event) => {
+                // When the HTML video has been appended to DOM...
+                subscriber.on('videoElementCreated', (event) => {
 
-                // Add a new HTML element for the user's name and nickname over its video
-                // 비디오 추가
-                this.appendUserData(event.element, subscriber.stream.connection);
+                    // Add a new HTML element for the user's name and nickname over its video
+                    // 비디오 추가
+                    this.appendUserData(event.element, subscriber.stream.connection);
+                });
             });
-        });
 
-        // On every Stream destroyed...
-        session.on('streamDestroyed', (event) => {
-            // Delete the HTML element with the user's name and nickname
-            // 비디오 삭제
-            this.removeUserData(event.stream.connection);
-        });
+            // On every Stream destroyed...
+            session.on('streamDestroyed', (event) => {
+                // Delete the HTML element with the user's name and nickname
+                // 비디오 삭제
+                this.removeUserData(event.stream.connection);
+            });
 
-        // On every asynchronous exception...
-        session.on('exception', (exception) => {
-            console.warn(exception);
-        });
-
-
-        // --- 4) Connect to the session passing the retrieved token and some more data from
-        //        the client (in this case a JSON with the nickname chosen by the user) ---
-
-        await session.connect(token, { clientData: userName })
+            // On every asynchronous exception...
+            session.on('exception', (exception) => {
+                console.warn(exception);
+            });
 
 
-        // --- 6) Get your own camera stream ---
+            // --- 4) Connect to the session passing the retrieved token and some more data from
+            //        the client (in this case a JSON with the nickname chosen by the user) ---
 
-        const publisher = OV.initPublisher('video-container', {
-            audioSource: undefined, // The source of audio. If undefined default microphone
-            videoSource: false, // The source of video. If undefined default webcam
-            publishAudio: true,  	// Whether you want to start publishing with your audio unmuted or not
-            publishVideo: false,  	// Whether you want to start publishing with your video enabled or not
-            insertMode: 'APPEND',	// How the video is inserted in the target element 'video-container'
-            mirror: false       	// Whether to mirror your local video or not
-        });
-
-        // --- 7) Specify the actions when events take place in our publisher ---
-
-        // When our HTML video has been added to DOM...
-        publisher.on('videoElementCreated', (event) => {
-            // Init the main video with ours and append our data
-            console.log("videoElementCreated", event)
-            const userData = { userName };
-            // this.initMainVideo(event.element, userData);
-            this.appendUserData(event.element, userData);
-            event.element.setAttribute("muted", true); // Mute local video
-        });
+            await session.connect(token, { clientData: userName })
 
 
-        // --- 8) Publish your stream ---
-        navigator.getUserMedia({ audio: true, video: false}, function (stream) {
-            if (stream.getAudioTracks().length > 0) {
-                console.log("publisher")
-                session.publish(publisher);
-            } else {
-                console.log("viewer")
+            // --- 6) Get your own camera stream ---
+
+            const publisher = OV.initPublisher('video-container', {
+                audioSource: undefined, // The source of audio. If undefined default microphone
+                videoSource: false, // The source of video. If undefined default webcam
+                publishAudio: true,  	// Whether you want to start publishing with your audio unmuted or not
+                publishVideo: false,  	// Whether you want to start publishing with your video enabled or not
+                insertMode: 'APPEND',	// How the video is inserted in the target element 'video-container'
+                mirror: false       	// Whether to mirror your local video or not
+            });
+
+            // --- 7) Specify the actions when events take place in our publisher ---
+
+            // When our HTML video has been added to DOM...
+            publisher.on('videoElementCreated', (event) => {
+                // Init the main video with ours and append our data
+                console.log("videoElementCreated", event)
+                const userData = { userName };
+                // this.initMainVideo(event.element, userData);
+                this.appendUserData(event.element, userData);
+                event.element.setAttribute("muted", true); // Mute local video
+            });
+
+
+            // --- 8) Publish your stream ---
+            navigator.getUserMedia({ audio: true, video: false}, function (stream) {
+                if (stream.getAudioTracks().length > 0) {
+                    console.log("publisher")
+                    session.publish(publisher);
+                } else {
+                    console.log("viewer")
+                }
+                resolve()
+            }, function (error) {
+                // code for when there is an error
+                console.warn(error);
+                console.warn("viewer mode");
+                reject(error)
+            });
+
+            this.OV = OV;
+            this.session = session;
+            this.roomKey = roomKey;
+            this.token = token;
+
+            window.onbeforeunload = () => { // Gracefully leave session
+                if (session) {
+                    this.removeUser();
+                    this.leaveSession();
+                }
+                this.logOut();
             }
-        }, function (error) {
-            // code for when there is an error
-            console.warn(error);
-            console.warn("viewer mode");
-        });
-
-        this.OV = OV;
-        this.session = session;
-        this.roomKey = roomKey;
-        this.token = token;
-
-        window.onbeforeunload = () => { // Gracefully leave session
-            if (session) {
-                this.removeUser();
-                this.leaveSession();
-            }
-            this.logOut();
-        }
-
+        })
     }
     appendUserData(videoElement, connection) {
         const nodeId = connection.connectionId;

@@ -7,6 +7,7 @@ export default class MainScene extends Phaser.Scene {
     constructor() {
         super("MainScene");
         this.state = {};
+        this.joined = false;
     }
 
     preload() {
@@ -32,69 +33,27 @@ export default class MainScene extends Phaser.Scene {
         const scene = this;
 
         // 배경 이미지를 등록하여 표시한다.
-        // this.add.image(0, 0, "mainroom").setOrigin(0);
-        // JSON tiledJSON을 map 추가
-        scene.map = scene.make.tilemap({ key: "map" });
+        scene.map = scene.make.tilemap({key: "map"});
 
         // 맵의 타일셋 이미지추가 (load key) 메모리에 로딩 정도
         const tileset = scene.map.addTilesetImage("tileset_17x17", "tilset_17x17");
         const logo = scene.map.addTilesetImage("logo", "logo");
-        
+
 
         // 레이어 추가 (실제 화면 표시)
         scene.belowLayer = scene.map.createLayer("Below", [tileset], 0, 0);
-        scene.belowLayer.setCollisionByProperty({ collides: true });
+        scene.belowLayer.setCollisionByProperty({collides: true});
 
         scene.logoLayer = scene.map.createLayer("Logo", [logo], 0, 0);
-        scene.logoLayer.setCollisionByProperty({ collides: true });
+        scene.logoLayer.setCollisionByProperty({collides: true});
 
         scene.worldLayer = scene.map.createLayer("World", [tileset], 0, 0);
-        scene.worldLayer.setCollisionByProperty({ collides: true });
-
-        // webRTC Audio Play
-
-
-        // speaker 위치 표시
-        scene.volumeUp = scene.add
-            .image(30, 20, "volumeUp")
-            .setScrollFactor(0, 0)
-            .setScale(0.4);
-        scene.volumeSpeaker = scene.add
-            .image(30, 60, "speakerOn")
-            .setScrollFactor(0, 0)
-            .setScale(0.4);
-        scene.volumeDown = scene.add
-            .image(30, 100, "volumeDown")
-            .setScrollFactor(0, 0)
-            .setScale(0.4);
-
-        // UI 상호작용 활성화
-        scene.volumeSpeaker.setInteractive();
-        scene.volumeUp.setInteractive();
-        scene.volumeDown.setInteractive();
-
-        // 볼륩업 마우스클릭 이벤트
-        scene.volumeUp.on("pointerdown", () => {
-            console.log("volume up");
-
-        });
-        scene.volumeDown.on("pointerdown", () => {
-            console.log("volume Down");
-
-        });
-
-
-
-
-
-
-
-
+        scene.worldLayer.setCollisionByProperty({collides: true});
 
         // 서버와 통신용으로 io() 내장 함수를 사용한다.
         this.socket = io();
         // 사용자가 접근시 최초에는 WaitingRoom Scene 화면을 런칭해준다. (룸 이름 입력 화면)
-        scene.scene.launch("WaitingRoom", { socket: scene.socket });
+        scene.scene.launch("WaitingRoom", {socket: scene.socket});
         // 물리 객체의 그룹을 하나만든다. 
         this.otherPlayers = this.physics.add.group();
         // 키보드 입력, 이동 등 업데이트시 사용됨.
@@ -108,14 +67,17 @@ export default class MainScene extends Phaser.Scene {
         // atlas 왼쪽, 오른쪽, 위, 아래 이동 애니메이션을 추가해준다.
 
         // 왼쪽 이동 애니메이션
-        this.anims.create({ key: "misa-left-walk", 
+        this.anims.create({
+            key: "misa-left-walk",
             frames: this.anims.generateFrameNames("atlas", {
-                prefix: "misa-left-walk.", start: 0, end: 3, zeroPad: 3 }), 
+                prefix: "misa-left-walk.", start: 0, end: 3, zeroPad: 3
+            }),
             frameRate: 10,
             repeat: -1,
         });
         // 오른쪽 이동 애니메이션
-        this.anims.create({ key: "misa-right-walk",
+        this.anims.create({
+            key: "misa-right-walk",
             frames: this.anims.generateFrameNames("atlas", {
                 prefix: "misa-right-walk.",
                 start: 0,
@@ -126,7 +88,8 @@ export default class MainScene extends Phaser.Scene {
             repeat: -1,
         });
         // 앞 이동 애니메이션
-        this.anims.create({ key: "misa-front-walk",
+        this.anims.create({
+            key: "misa-front-walk",
             frames: this.anims.generateFrameNames("atlas", {
                 prefix: "misa-front-walk.",
                 start: 0,
@@ -137,7 +100,8 @@ export default class MainScene extends Phaser.Scene {
             repeat: -1,
         });
         // 뒤 이동 애니메이션
-        this.anims.create({ key: "misa-back-walk",
+        this.anims.create({
+            key: "misa-back-walk",
             frames: this.anims.generateFrameNames("atlas", {
                 prefix: "misa-back-walk.",
                 start: 0,
@@ -149,52 +113,57 @@ export default class MainScene extends Phaser.Scene {
         });
 
 
-
         // ***** 서버 통신 ****
 
-        this.socket.on("setState", function(state) {
+        this.socket.on("setState", function (state) {
             console.log("setState", state);
-            const { roomKey, players, numPlayers } = state;
+            const {roomKey, players, numPlayers, input} = state;
             scene.physics.resume();
             scene.state.roomKey = roomKey;
             scene.state.players = players;
             scene.state.numPlayers = numPlayers;
 
             const player = Object.values(players).find(player => player.playerId === scene.socket.id)
-            
+
             if (player) {
-                openvidu.joinSession(roomKey, player.username)
+                openvidu.joinSession(roomKey, player.userName)
                     .then(() => {
                         scene.audioConnectText = scene.add.text(
                             200,
-                            50,
-                            "오디오가 연결되었습니다.",
+                            80,
+                            "마이크를 연결하였습니다.",
                             {
-                                fill: "",
-                                fontSize: "24pt",
+                                fill: "#65C18C",
+                                fontSize: "66px",
                                 fontStyle: "bold"
                             });
+                        setTimeout(() => {
+                            scene.audioConnectText.destroy()
+                        }, 5000)
                     })
                     .catch(error => {
                         console.warn(error)
                         scene.audioConnectText = scene.add.text(
                             200,
-                            50,
-                            "오디오 연결하지 못했습니다.",
+                            80,
+                            "마이크를 연결할 수 없습니다.",
                             {
-                                fill: "",
+                                fill: "#FF7BA9",
                                 fontSize: "24pt",
                                 fontStyle: "bold"
                             });
+                        setTimeout(() => {
+                            scene.audioConnectText.destroy()
+                        }, 5000)
                     })
             }
 
         });
 
         // 모든 플레이어
-        this.socket.on("currentPlayers", function(arg) {
+        this.socket.on("currentPlayers", function (arg) {
             console.log("currentPlayers", arg);
-            const { players, numPlayers } = arg;
+            const {players, numPlayers} = arg;
             scene.state.numPlayers = numPlayers;
             Object.keys(players).forEach(id => {
                 if (players[id].playerId === scene.socket.id) {
@@ -205,35 +174,44 @@ export default class MainScene extends Phaser.Scene {
             });
         });
 
-        this.socket.on("newPlayer", function(arg) {
+        this.socket.on("newPlayer", function (arg) {
             console.log("newPlayer", arg);
-            const { playerInfo, numPlayers } = arg;
+            const {playerInfo, numPlayers} = arg;
             scene.addOtherPlayers(scene, playerInfo);
             scene.state.numPlayers = numPlayers;
         });
 
-        this.socket.on("playerMoved", function(playerInfo) {
-            console.log("playerMoved", playerInfo);
-            scene.otherPlayers.getChildren().forEach(function(otherPlayer) {
+        this.socket.on("playerMoved", function (playerInfo) {
+            scene.otherPlayers.getChildren().forEach(function (otherPlayer) {
                 if (playerInfo.playerId === otherPlayer.playerId) {
                     const oldX = otherPlayer.x;
                     const oldY = otherPlayer.y;
                     otherPlayer.setPosition(playerInfo.x, playerInfo.y);
+                    otherPlayer.playerName.setPosition(playerInfo.x - 20, playerInfo.y - 25);
+                    if (oldX < playerInfo.x) {
+                        otherPlayer.anims.play("misa-right-walk", true);
+                    } else if (oldX > playerInfo.x) {
+                        otherPlayer.anims.play("misa-left-walk", true);
+                    } else if (oldY < playerInfo.y) {
+                        otherPlayer.anims.play("misa-front-walk", true);
+                    } else if (oldY > playerInfo.y) {
+                        otherPlayer.anims.play("misa-back-walk", true);
+                    }
                 }
             });
         });
 
         this.socket.on("otherPlayerStopped", function (playerInfo) {
-            console.log("otherPlayerStopped", playerInfo);
             scene.otherPlayers.getChildren().forEach(function (otherPlayer) {
+                console.log(otherPlayer, playerInfo.playerId)
                 if (playerInfo.playerId === otherPlayer.playerId) {
-                otherPlayer.anims.stop(null, true);
+                    otherPlayer.anims.stop(null, true);
                 }
             });
         });
 
-        this.socket.on("disconnected", function(arg) {
-            const { playerId, numPlayers } = arg;
+        this.socket.on("disconnected", function (arg) {
+            const {playerId, numPlayers} = arg;
             scene.state.numPlayer = numPlayers;
             scene.otherPlayers.getChildren().forEach(otherPlayer => {
                 if (playerId === otherPlayer.playerId) {
@@ -242,7 +220,7 @@ export default class MainScene extends Phaser.Scene {
                 }
             });
         });
-        
+
     }
 
     update() {
@@ -254,12 +232,12 @@ export default class MainScene extends Phaser.Scene {
             const speed = 225;
             const prevVelocity = this.astronaut.body.velocity.clone();
             this.astronaut.body.setVelocity(0);
-            
+
             // 특정 방향에서 속도가 빨라지는 현상으로 방지하기 위한 코드.
             this.astronaut.body.velocity.normalize().scale(speed);
 
             // Horizontal movement
-            if (this.cursors.left.isDown) { 
+            if (this.cursors.left.isDown) {
                 // 좌표로 보았을때 마이너스로 보내야 좌측이등
                 // 왼쪽 이동
                 this.astronaut.body.setVelocityX(-speed);
@@ -285,19 +263,31 @@ export default class MainScene extends Phaser.Scene {
                 this.astronaut.anims.stop(null, true);
             }
 
-            
             // emit player movement
-            let x = this.astronaut.x;
-            let y = this.astronaut.y;
-            let params = { x: this.astronaut.x, y: this.astronaut.y, roomKey: scene.state.roomKey };
+            var x = this.astronaut.x;
+            var y = this.astronaut.y;
             if (this.astronaut.oldPosition && (x !== this.astronaut.oldPosition.x || y !== this.astronaut.oldPosition.y)) {
                 this.moving = true;
-                this.socket.emit("playerMovement", params);
+                this.socket.emit("playerMovement", {
+                    x: this.astronaut.x,
+                    y: this.astronaut.y,
+                    roomKey: scene.state.roomKey,
+                });
+                this.astronaut
+                    .playerName
+                    .setPosition(this.astronaut.body.x, this.astronaut.body.y - 15)
+                // emit player stopped
             } else if (this.joined && this.moving) {
                 this.moving = false;
-                this.socket.emit("playerStopped", params);
+                this.socket.emit("playerStopped", {
+                    x: this.astronaut.x,
+                    y: this.astronaut.y,
+                    roomKey: scene.state.roomKey,
+                });
+                this.astronaut
+                    .playerName
+                    .setPosition(this.astronaut.body.x, this.astronaut.body.y - 15)
             }
-
 
             // save old position data
             this.astronaut.oldPosition = {
@@ -318,13 +308,18 @@ export default class MainScene extends Phaser.Scene {
             .sprite(playerInfo.x, playerInfo.y, "atlas", "misa-front")
             .setOrigin(0.5, 0.5)
             .setSize(30, 40)
-            .setOffset(0, 24)
-            ;
+            .setOffset(0, 24);
+        let shortUserName = playerInfo.userName.substring(0, 5)
+        scene.astronaut.playerName = scene.add.text(
+            playerInfo.x - 20,
+            playerInfo.y - 25,
+            shortUserName,
+            {
+                fill: "#000000",
+                fontSize: "12px",
+                fontStyle: "bold"
+            });
 
-            // let text = scene.add.text(0, 0, 'Testing');
-            // text.font = "Arial";
-            // text.setOrigin(200, 200);
-            // scene.astronaut.addChild(text);
 
         // 레이어와 물리 벽 추가
         scene.physics.add.collider(scene.astronaut, this.belowLayer);
@@ -335,26 +330,26 @@ export default class MainScene extends Phaser.Scene {
         scene.camera = scene.cameras.main;
         // 객체 추적 
         scene.camera.startFollow(scene.astronaut);
-        // scene.camera.setBounds(
-        //     0,
-        //     0,
-        //     scene.map.widthInPixels,
-        //     scene.map.heightInPixels
-        // );
     }
+
     addOtherPlayers(scene, playerInfo) {
         const otherPlayer = scene.add.sprite(
-            playerInfo.x + 40,
-            playerInfo.y + 40,
+            playerInfo.x,
+            playerInfo.y,
             "atlas"
         );
         otherPlayer.playerId = playerInfo.playerId;
+        let shortUserName = playerInfo.userName.substring(0, 5)
 
-        // const username = scene.add.text(0, 0, playerInfo.username);
-        // text.font = "Arial";
-        // text.setOrigin(0.5, 0.5);
-
-        
+        otherPlayer.playerName = scene.add.text(
+            playerInfo.x - 20,
+            playerInfo.y - 25,
+            shortUserName,
+            {
+                fill: "#000000",
+                fontSize: "12px",
+                fontStyle: "bold"
+            });
         scene.otherPlayers.add(otherPlayer);
     }
 }
