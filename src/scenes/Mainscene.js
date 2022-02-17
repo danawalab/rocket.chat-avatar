@@ -216,6 +216,7 @@ export default class MainScene extends Phaser.Scene {
             scene.otherPlayers.getChildren().forEach(otherPlayer => {
                 if (playerId === otherPlayer.playerId) {
                     otherPlayer.destroy();
+                    otherPlayer.playerName.destroy();
                     console.log("destroy player", otherPlayer.playerId);
                 }
             });
@@ -309,7 +310,7 @@ export default class MainScene extends Phaser.Scene {
             .setOrigin(0.5, 0.5)
             .setSize(30, 40)
             .setOffset(0, 24);
-        let shortUserName = playerInfo.userName.substring(0, 5)
+        let shortUserName = playerInfo.userName.substring(0, 10)
         scene.astronaut.playerName = scene.add.text(
             playerInfo.x - 20,
             playerInfo.y - 25,
@@ -339,7 +340,7 @@ export default class MainScene extends Phaser.Scene {
             "atlas"
         );
         otherPlayer.playerId = playerInfo.playerId;
-        let shortUserName = playerInfo.userName.substring(0, 5)
+        let shortUserName = playerInfo.userName.substring(0, 10)
 
         otherPlayer.playerName = scene.add.text(
             playerInfo.x - 20,
