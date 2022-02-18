@@ -134,7 +134,7 @@ export default class MainScene extends Phaser.Scene {
                             "마이크를 연결하였습니다.",
                             {
                                 fill: "#65C18C",
-                                fontSize: "66px",
+                                fontSize: "24pt",
                                 fontStyle: "bold"
                             });
                         setTimeout(() => {
@@ -215,8 +215,8 @@ export default class MainScene extends Phaser.Scene {
             scene.state.numPlayer = numPlayers;
             scene.otherPlayers.getChildren().forEach(otherPlayer => {
                 if (playerId === otherPlayer.playerId) {
-                    otherPlayer.destroy();
                     otherPlayer.playerName.destroy();
+                    otherPlayer.destroy();
                     console.log("destroy player", otherPlayer.playerId);
                 }
             });

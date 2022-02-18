@@ -110,7 +110,6 @@ export default class OpenviduHandler {
                 event.element.setAttribute("muted", true); // Mute local video
             });
 
-
             // --- 8) Publish your stream ---
             navigator.getUserMedia({ audio: true, video: false}, function (stream) {
                 if (stream.getAudioTracks().length > 0) {
